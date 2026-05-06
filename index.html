@@ -2,23 +2,17 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>KEMAL TV | GİRİŞ</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>KEMAL TV | MOBİL PRO</title>
+    <link rel="stylesheet" href="style.css">
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
-    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div class="auth-card">
-        <h1>KEMAL TV</h1>
-        <div class="tabs">
-            <button id="l-tab" class="active" onclick="setMode('login')">GİRİŞ</button>
-            <button id="r-tab" onclick="setMode('reg')">KAYIT</button>
-        </div>
-        <input type="text" id="u" placeholder="Kullanıcı Adı">
-        <input type="password" id="p" placeholder="Şifre">
-        <button class="main-btn" onclick="auth()">SİSTEME GİR</button>
-    </div>
+
+    <div id="auth-section" class="screen active"></div> <div id="room-section" class="screen"></div> <div id="admin-modal" class="modal"></div> <script src="config.js"></script>
     <script src="auth.js"></script>
+    <script src="room.js"></script>
+    <script src="admin.js"></script>
 </body>
 </html>
