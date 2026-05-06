@@ -2,45 +2,20 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <title>KEMAL TV - PANEL</title>
+    <title>ADMİN KOMUTA MERKEZİ</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
-    <style>
-        body { background: #0b0f1a; color: white; font-family: sans-serif; padding: 20px; text-align: center; }
-        .box { background: #161d2f; padding: 30px; border-radius: 20px; border: 2px solid #ffd700; max-width: 400px; margin: auto; }
-        input { width: 100%; padding: 15px; margin: 10px 0; border-radius: 10px; border: none; background: #0b0f1a; color: white; }
-        button { background: #ffd700; color: black; padding: 15px; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; width: 100%; margin-top: 10px; }
-    </style>
+    <link rel="stylesheet" href="style.css">
 </head>
-<body>
-    <div class="box">
-        <h2>HDMI GİRİŞİ (L.kemal.16)</h2>
-        <input type="text" id="v-link" placeholder="YouTube Linkini Yapıştır">
-        <button onclick="setV()">YAYINA VER</button>
-        <button onclick="clearC()" style="background:#ef4444; color:white;">SOHBETİ SİL</button>
-        <button onclick="window.location.href='oda.html'" style="background:#334155; color:white;">ODAYA DÖN</button>
+<body class="admin-body">
+    <div class="admin-panel">
+        <h2>SÜPER ADMİN: L.KEMAL.16</h2>
+        <input type="text" id="v-url" placeholder="YouTube Linkini Bas">
+        <button onclick="sendHDMI()">HDMI YAYININA VER</button>
+        <button class="danger" onclick="clearAll()">TÜM SOHBETİ SİL</button>
+        <div id="room-viewer">
+            </div>
     </div>
-    <script>
-        const config = {
-            apiKey: "AIzaSyC9R9X3FxqgNQ5kWerDmLRSyijbnquoRzg",
-            authDomain: "kemaltv-95504.firebaseapp.com",
-            databaseURL: "https://kemaltv-95504-default-rtdb.europe-west1.firebasedatabase.app",
-            projectId: "kemaltv-95504",
-            storageBucket: "kemaltv-95504.firebasestorage.app",
-            messagingSenderId: "1061917735137",
-            appId: "1:1061917735137:web:5d95ceef5fe479094b9fa0"
-        };
-        firebase.initializeApp(config);
-        const db = firebase.database();
-        if(localStorage.getItem('kemal_user') !== 'L.kemal.16') window.location.href = 'index.html';
-
-        function setV() {
-            const l = document.getElementById('v-link').value;
-            if(l) db.ref('rooms/genel/currentVideo').set({ url: l }).then(() => alert("HDMI Yayını Aktif!"));
-        }
-        function clearC() {
-            db.ref('rooms/genel/chats').remove().then(() => alert("Sohbet başarıyla temizlendi!"));
-        }
-    </script>
+    <script src="admin.js"></script>
 </body>
 </html>
