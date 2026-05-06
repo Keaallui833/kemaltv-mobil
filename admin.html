@@ -2,16 +2,63 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <title>KEMAL TV - YÖNETİM</title>
+    <title>KEMAL TV - YÖNETİCİ GİRİŞİ</title>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <link rel="stylesheet" href="style.css">
+    <style>
+        body { background: #0b0f1a; color: white; padding: 20px; text-align: center; }
+        .admin-box { background: #161d2f; padding: 30px; border-radius: 20px; border: 2px solid #ffd700; max-width: 500px; margin: auto; }
+        input { width: 100%; padding: 15px; margin: 10px 0; border-radius: 10px; border: none; background: #0b0f1a; color: white; }
+        button { background: #ffd700; color: black; padding: 15px 30px; border: none; border-radius: 10px; font-weight: bold; cursor: pointer; width: 100%; }
+    </style>
 </head>
-<body style="background:#0b0f1a; color:white; padding:20px;">
-    <h1>KEMAL TV YÖNETİM</h1>
-    <div style="border:1px solid #ef4444; padding:20px; border-radius:15px;">
-        <h3>Kullanıcı Yönetimi</h3>
-        <p>Batın'a yetki ver veya birini engelle.</p>
-        <button onclick="alert('Sohbet temizlendi!')">SOHBETİ SİL</button>
+<body>
+
+    <div class="admin-box">
+        <h1>HDMI GİRİŞİ (Video Yönetimi)</h1>
+        <p>Buraya yapıştırdığın YouTube linki anında odada açılır.</p>
+        <input type="text" id="video-link" placeholder="YouTube Video Linkini Buraya Yapıştır...">
+        <button onclick="yayinaVer()">YAYINA VER (HDMI AKTİF)</button>
+        
+        <hr style="margin: 20px 0; opacity: 0.2;">
+        
+        <button onclick="sohbetiTemizle()" style="background: #ef4444; color: white;">SOHBETİ TEMİZLE</button>
     </div>
-    <button onclick="window.location.href='oda.html'" style="margin-top:20px;">ODAYA DÖN</button>
+
+<script>
+    const firebaseConfig = {
+        apiKey: "AIzaSyC9R9X3FxqgNQ5kWerDmLRSyijbnquoRzg",
+        authDomain: "kemaltv-95504.firebaseapp.com",
+        databaseURL: "https://kemaltv-95504-default-rtdb.europe-west1.firebasedatabase.app",
+        projectId: "kemaltv-95504",
+        storageBucket: "kemaltv-95504.firebasestorage.app",
+        messagingSenderId: "1061917735137",
+        appId: "1:1061917735137:web:5d95ceef5fe479094b9fa0"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    // Güvenlik: Kemal değilse kov!
+    if(localStorage.getItem('kemal_user') !== 'L.kemal.16') {
+        alert("Yetkisiz Giriş!");
+        window.location.href = 'index.html';
+    }
+
+    function yayinaVer() {
+        const link = document.getElementById('video-link').value;
+        if(!link) return alert("Link yapıştır anasını satayım!");
+        
+        // Odadaki herkese bu videoyu gönder
+        db.ref('rooms/genel/currentVideo').set({
+            url: link,
+            sender: 'Admin'
+        }).then(() => alert("Video yayına verildi!"));
+    }
+
+    function sohbetiTemizle() {
+        db.ref('rooms/genel/chats').remove().then(() => alert("Sohbet sıfırlandı!"));
+    }
+</script>
 </body>
 </html>
