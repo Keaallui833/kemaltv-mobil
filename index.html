@@ -3,50 +3,58 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>KEMAL TV - ANLIK SES</title>
+    <title>KEMAL TV - GERÇEK WEB-RTC</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: sans-serif; }
         body, html { height: 100%; overflow: hidden; background: #0b0f1a; display: flex; flex-direction: column; }
-        #video-section { width: 100%; height: 30%; background: #000; border-bottom: 2px solid #ef4444; position: relative; }
+        
+        #video-section { width: 100%; height: 30%; background: #000; border-bottom: 2px solid #ef4444; }
         iframe { width: 100%; height: 100%; border: none; }
+
         #chat-area { flex: 1; display: flex; flex-direction: column; overflow: hidden; background: #0f172a; }
         #messages { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 10px; }
+        
         .msg { padding: 10px 15px; border-radius: 15px; max-width: 80%; font-size: 14px; color: white; }
         .msg-other { background: #1e293b; align-self: flex-start; }
         .msg-me { background: #ef4444; align-self: flex-end; }
-        .user-tag { font-size: 11px; color: #94a3b8; display: block; margin-bottom: 3px; }
+        .user-tag { font-size: 11px; color: #94a3b8; display: block; margin-bottom: 3px; font-weight: bold; }
+        .admin-badge { background: #ffd700; color: #000; font-size: 9px; padding: 2px 5px; border-radius: 4px; margin-right: 5px; }
+
         #controls { padding: 12px; background: #161d2f; display: flex; gap: 10px; align-items: center; }
         #msg-input { flex: 1; padding: 12px; border-radius: 10px; border: none; background: #0b0f1a; color: white; outline: none; }
+        
         #mic-btn { width: 45px; height: 45px; border-radius: 50%; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; }
         .mic-off { background: #334155; color: white; }
-        .mic-on { background: #10b981; color: white; box-shadow: 0 0 10px #10b981; }
+        .mic-on { background: #10b981; color: white; box-shadow: 0 0 15px #10b981; }
+
         #login-screen { position: fixed; inset: 0; background: #0b0f1a; display: flex; align-items: center; justify-content: center; z-index: 10000; }
-        .login-card { background: #161d2f; padding: 30px; border-radius: 20px; width: 85%; text-align: center; border: 1px solid #ef4444; }
+        .login-card { background: #161d2f; padding: 30px; border-radius: 20px; width: 85%; max-width: 400px; text-align: center; border: 1px solid #ef4444; }
+        input { width: 100%; padding: 12px; margin: 10px 0; border-radius: 10px; border: 1px solid #2d3748; background: #0b0f1a; color: white; }
     </style>
 </head>
 <body>
 
 <div id="login-screen">
     <div class="login-card">
-        <h2 style="color:white; margin-bottom:15px;">KEMAL TV LIVE</h2>
-        <input type="text" id="user-name" placeholder="Adın">
-        <input type="text" id="room-id" placeholder="Oda Adı">
-        <button onclick="joinRoom()" style="width: 100%; padding: 15px; background: #ef4444; color: white; border: none; border-radius: 10px; font-weight: bold;">Giriş Yap</button>
+        <h2 style="color:white; margin-bottom:15px;">KEMAL TV PRO LIVE</h2>
+        <input type="text" id="user-name" placeholder="Adını Yaz (Kayıt)">
+        <input type="text" id="room-id" placeholder="Oda Adını Yaz">
+        <button onclick="joinRoom()" style="width: 100%; padding: 15px; background: #ef4444; color: white; border: none; border-radius: 10px; font-weight: bold;">KAYIT OL VE BAŞLAT</button>
     </div>
 </div>
 
 <div id="video-section">
-    <div id="player" style="height:100%; display:flex; align-items:center; justify-content:center; color:#444;">Video Hazır</div>
+    <div id="player" style="height:100%; display:flex; align-items:center; justify-content:center; color:#444;">Sinema Modu Hazır...</div>
 </div>
 
 <div id="chat-area">
     <div id="messages"></div>
-    <div id="controls">
-        <button id="mic-btn" class="mic-off" onclick="toggleStream()"><i class="fas fa-phone"></i></button>
-        <input type="text" id="msg-input" placeholder="Mesaj yaz...">
+    <audio id="remote-audio" autoplay></audio> <div id="controls">
+        <button id="mic-btn" class="mic-off" onclick="toggleWebRTC()"><i class="fas fa-microphone"></i></button>
+        <input type="text" id="msg-input" placeholder="Mesaj veya Link...">
         <button onclick="send()" style="background:none; border:none; color:#ef4444; font-size:24px;"><i class="fas fa-paper-plane"></i></button>
     </div>
 </div>
@@ -64,45 +72,90 @@
 
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
-    let myName, myRoom, localStream, peers = {};
+    let myName, myRoom, pc, localStream;
+
+    // WebRTC Yapılandırması (Ücretsiz Google Sunucusu)
+    const servers = { iceServers: [{ urls: ["stun:stun1.l.google.com:19302", "stun:stun2.l.google.com:19302"] }] };
 
     async function joinRoom() {
         myName = document.getElementById('user-name').value.trim();
         myRoom = document.getElementById('room-id').value.trim().toLowerCase();
-        if(!myName || !myRoom) return;
+        if(!myName || !myRoom) return alert("Boş geçme Kemal!");
         document.getElementById('login-screen').style.display = 'none';
 
+        // Mesaj ve Linkleri Dinle
         db.ref('rooms/' + myRoom + '/chats').on('child_added', (snap) => {
             const d = snap.val();
-            if(!d.type) {
-                const div = document.createElement('div');
-                div.className = `msg ${d.u === myName ? 'msg-me' : 'msg-other'}`;
-                div.innerHTML = `<span class="user-tag">${d.u}</span>${d.t}`;
-                document.getElementById('messages').appendChild(div);
-                document.getElementById('messages').scrollTop = document.getElementById('messages').scrollHeight;
-                if(d.t.includes('youtube.com/')) loadVideo(d.t);
+            if(d.type === "msg") {
+                displayMessage(d);
+                if(d.t.includes('youtube.com/') || d.t.includes('youtu.be/')) loadVideo(d.t);
+            }
+        });
+
+        // WebRTC Sinyallerini Dinle (Ses tüneli için)
+        db.ref('rooms/' + myRoom + '/webrtc').on('child_added', async (snap) => {
+            const data = snap.val();
+            if(data.u !== myName) {
+                if(data.offer) handleOffer(data.offer);
+                else if(data.answer) pc.setRemoteDescription(new RTCSessionDescription(data.answer));
+                else if(data.candidate) pc.addIceCandidate(new RTCIceCandidate(data.candidate));
             }
         });
     }
 
-    async function toggleStream() {
+    async function toggleWebRTC() {
         const btn = document.getElementById('mic-btn');
         if(!localStream) {
-            localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
             btn.className = "mic-on";
-            // Burada anlık veri akışı başlar
+            localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            initPC();
+            localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
+            const offer = await pc.createOffer();
+            await pc.setLocalDescription(offer);
+            db.ref('rooms/' + myRoom + '/webrtc').push({ u: myName, offer: offer });
         } else {
+            btn.className = "mic-off";
             localStream.getTracks().forEach(t => t.stop());
             localStream = null;
-            btn.className = "mic-off";
         }
+    }
+
+    function initPC() {
+        pc = new RTCPeerConnection(servers);
+        pc.onicecandidate = e => {
+            if(e.candidate) db.ref('rooms/' + myRoom + '/webrtc').push({ u: myName, candidate: e.candidate });
+        };
+        pc.ontrack = e => {
+            document.getElementById('remote-audio').srcObject = e.streams[0];
+        };
+    }
+
+    async function handleOffer(offer) {
+        initPC();
+        await pc.setRemoteDescription(new RTCSessionDescription(offer));
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        stream.getTracks().forEach(t => pc.addTrack(t, stream));
+        const answer = await pc.createAnswer();
+        await pc.setLocalDescription(answer);
+        db.ref('rooms/' + myRoom + '/webrtc').push({ u: myName, answer: answer });
     }
 
     function send() {
         const inp = document.getElementById('msg-input');
         if(!inp.value.trim()) return;
-        db.ref('rooms/' + myRoom + '/chats').push({ u: myName, t: inp.value.trim() });
+        const isAdmin = (myName.toLowerCase() === "kemal");
+        db.ref('rooms/' + myRoom + '/chats').push({ u: myName, t: inp.value.trim(), admin: isAdmin, type: "msg" });
         inp.value = "";
+    }
+
+    function displayMessage(d) {
+        const box = document.getElementById('messages');
+        const div = document.createElement('div');
+        div.className = `msg ${d.u === myName ? 'msg-me' : 'msg-other'}`;
+        let badge = d.admin ? `<span class="admin-badge">ADMIN</span>` : "";
+        div.innerHTML = `<span class="user-tag">${badge}${d.u}</span>${d.t}`;
+        box.appendChild(div);
+        box.scrollTop = box.scrollHeight;
     }
 
     function loadVideo(url) {
