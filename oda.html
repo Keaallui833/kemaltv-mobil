@@ -3,74 +3,27 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>KEMAL TV - ODA</title>
+    <title>KEMAL TV - CANLI</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; font-family: sans-serif; }
-        body { background: #0b0f1a; color: white; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
-        #admin-bar { display: none; background: #ffd700; color: black; padding: 8px; text-align: center; font-weight: bold; font-size: 13px; cursor: pointer; }
-        #video-box { height: 35%; background: #000; border-bottom: 2px solid #ef4444; }
-        iframe { width: 100%; height: 100%; border: none; }
-        #chat-box { flex: 1; display: flex; flex-direction: column; background: #0f172a; overflow: hidden; }
-        #msgs { flex: 1; overflow-y: auto; padding: 15px; display: flex; flex-direction: column; gap: 8px; }
-        .m { padding: 10px; border-radius: 12px; max-width: 80%; font-size: 14px; }
-        .m-me { align-self: flex-end; background: #ef4444; }
-        .m-ot { align-self: flex-start; background: #1e293b; }
-        #input-area { padding: 15px; background: #161d2f; display: flex; gap: 10px; }
-        input { flex: 1; padding: 12px; border-radius: 20px; border: none; background: #0b0f1a; color: white; outline: none; }
-        button { background: #ef4444; border: none; color: white; padding: 10px 20px; border-radius: 20px; font-weight: bold; }
-    </style>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div id="admin-bar" onclick="window.location.href='admin.html'">YÖNETİCİ PANELİNİ AÇ</div>
-    <div id="video-box"><div id="player" style="height:100%; display:flex; align-items:center; justify-content:center; color:#555;">Video bekleniyor...</div></div>
-    <div id="chat-box">
+    <div id="admin-bar" style="display:none;" onclick="window.location.href='admin.html'">SÜPER ADMİN PANELİ</div>
+    
+    <div class="video-section">
+        <div id="player">HDMI Bağlantısı Bekleniyor...</div>
+    </div>
+
+    <div class="chat-section">
         <div id="msgs"></div>
-        <div id="input-area">
-            <input type="text" id="msg-in" placeholder="Mesaj yaz...">
-            <button onclick="send()">GÖNDER</button>
+        <div class="input-panel">
+            <button id="mic" onclick="toggleMic()">🎤</button>
+            <input type="text" id="m-in" placeholder="Mesaj yaz...">
+            <button id="send" onclick="send()">></button>
         </div>
     </div>
-    <script>
-        const config = {
-            apiKey: "AIzaSyC9R9X3FxqgNQ5kWerDmLRSyijbnquoRzg",
-            authDomain: "kemaltv-95504.firebaseapp.com",
-            databaseURL: "https://kemaltv-95504-default-rtdb.europe-west1.firebasedatabase.app",
-            projectId: "kemaltv-95504",
-            storageBucket: "kemaltv-95504.firebasestorage.app",
-            messagingSenderId: "1061917735137",
-            appId: "1:1061917735137:web:5d95ceef5fe479094b9fa0"
-        };
-        firebase.initializeApp(config);
-        const db = firebase.database();
-        const user = localStorage.getItem('kemal_user') || 'Misafir';
-
-        if(user === 'L.kemal.16') document.getElementById('admin-bar').style.display = 'block';
-
-        db.ref('rooms/genel/chats').on('child_added', s => {
-            const d = s.val();
-            const div = document.createElement('div');
-            div.className = `m ${d.u === user ? 'm-me' : 'm-ot'}`;
-            div.innerHTML = `<small style="opacity:0.6">${d.u}</small><br>${d.t}`;
-            document.getElementById('msgs').appendChild(div);
-            document.getElementById('msgs').scrollTop = document.getElementById('msgs').scrollHeight;
-        });
-
-        db.ref('rooms/genel/currentVideo').on('value', s => {
-            const d = s.val();
-            if(d && d.url) {
-                let id = d.url.includes('v=') ? d.url.split('v=')[1].split('&')[0] : d.url.split('youtu.be/')[1].split('?')[0];
-                document.getElementById('player').innerHTML = `<iframe src="https://www.youtube.com/embed/${id}?autoplay=1" allow="autoplay; fullscreen"></iframe>`;
-            }
-        });
-
-        function send() {
-            const i = document.getElementById('msg-in');
-            if(!i.value.trim()) return;
-            db.ref('rooms/genel/chats').push({ u: user, t: i.value });
-            i.value = "";
-        }
-    </script>
+    <audio id="audio" autoplay></audio>
+    <script src="room.js"></script>
 </body>
 </html>
