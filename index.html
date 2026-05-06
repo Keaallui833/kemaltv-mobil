@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>KEMAL TV - SESLİ SİSTEM</title>
+    <title>KEMAL TV - ANLIK SES</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
@@ -17,41 +17,36 @@
         .msg { padding: 10px 15px; border-radius: 15px; max-width: 80%; font-size: 14px; color: white; }
         .msg-other { background: #1e293b; align-self: flex-start; }
         .msg-me { background: #ef4444; align-self: flex-end; }
-        .admin-badge { background: #ffd700; color: #000; font-size: 9px; padding: 2px 5px; border-radius: 4px; font-weight: bold; margin-right: 5px; }
         .user-tag { font-size: 11px; color: #94a3b8; display: block; margin-bottom: 3px; }
         #controls { padding: 12px; background: #161d2f; display: flex; gap: 10px; align-items: center; }
         #msg-input { flex: 1; padding: 12px; border-radius: 10px; border: none; background: #0b0f1a; color: white; outline: none; }
         #mic-btn { width: 45px; height: 45px; border-radius: 50%; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; }
         .mic-off { background: #334155; color: white; }
-        .mic-on { background: #10b981; color: white; box-shadow: 0 0 10px #10b981; animation: pulse 1.5s infinite; }
-        @keyframes pulse { 0% { transform: scale(1); } 50% { transform: scale(1.1); } 100% { transform: scale(1); } }
+        .mic-on { background: #10b981; color: white; box-shadow: 0 0 10px #10b981; }
         #login-screen { position: fixed; inset: 0; background: #0b0f1a; display: flex; align-items: center; justify-content: center; z-index: 10000; }
         .login-card { background: #161d2f; padding: 30px; border-radius: 20px; width: 85%; text-align: center; border: 1px solid #ef4444; }
-        .login-card input { width: 100%; padding: 12px; margin: 10px 0; border-radius: 8px; border: 1px solid #2d3748; background: #0b0f1a; color: white; }
     </style>
 </head>
 <body>
 
 <div id="login-screen">
     <div class="login-card">
-        <h2 style="color:white; margin-bottom:15px;">KEMAL TV PRO</h2>
-        <input type="text" id="user-name" placeholder="Kullanıcı Adın">
+        <h2 style="color:white; margin-bottom:15px;">KEMAL TV LIVE</h2>
+        <input type="text" id="user-name" placeholder="Adın">
         <input type="text" id="room-id" placeholder="Oda Adı">
         <button onclick="joinRoom()" style="width: 100%; padding: 15px; background: #ef4444; color: white; border: none; border-radius: 10px; font-weight: bold;">Giriş Yap</button>
     </div>
 </div>
 
 <div id="video-section">
-    <div id="player" style="height:100%; display:flex; align-items:center; justify-content:center; color:#444;">Video/Link Bekleniyor...</div>
+    <div id="player" style="height:100%; display:flex; align-items:center; justify-content:center; color:#444;">Video Hazır</div>
 </div>
 
 <div id="chat-area">
     <div id="messages"></div>
     <div id="controls">
-        <button id="mic-btn" class="mic-off" onmousedown="startRecording()" onmouseup="stopRecording()" ontouchstart="startRecording()" ontouchend="stopRecording()">
-            <i class="fas fa-microphone"></i>
-        </button>
-        <input type="text" id="msg-input" placeholder="Mesaj veya YouTube linki...">
+        <button id="mic-btn" class="mic-off" onclick="toggleStream()"><i class="fas fa-phone"></i></button>
+        <input type="text" id="msg-input" placeholder="Mesaj yaz...">
         <button onclick="send()" style="background:none; border:none; color:#ef4444; font-size:24px;"><i class="fas fa-paper-plane"></i></button>
     </div>
 </div>
@@ -69,76 +64,45 @@
 
     firebase.initializeApp(firebaseConfig);
     const db = firebase.database();
-    let myName, myRoom, mediaRecorder, audioChunks = [];
+    let myName, myRoom, localStream, peers = {};
 
-    function joinRoom() {
+    async function joinRoom() {
         myName = document.getElementById('user-name').value.trim();
         myRoom = document.getElementById('room-id').value.trim().toLowerCase();
-        if(!myName || !myRoom) return alert("Boş bırakma abi!");
+        if(!myName || !myRoom) return;
         document.getElementById('login-screen').style.display = 'none';
 
-        // Mesajları Dinle
         db.ref('rooms/' + myRoom + '/chats').on('child_added', (snap) => {
             const d = snap.val();
-            if(d.type === "audio") {
-                playAudio(d.t); // Ses ise oynat
-            } else {
-                displayMessage(d); // Mesaj ise göster
-                if(d.t.includes('youtube.com/') || d.t.includes('youtu.be/')) loadVideo(d.t);
+            if(!d.type) {
+                const div = document.createElement('div');
+                div.className = `msg ${d.u === myName ? 'msg-me' : 'msg-other'}`;
+                div.innerHTML = `<span class="user-tag">${d.u}</span>${d.t}`;
+                document.getElementById('messages').appendChild(div);
+                document.getElementById('messages').scrollTop = document.getElementById('messages').scrollHeight;
+                if(d.t.includes('youtube.com/')) loadVideo(d.t);
             }
         });
     }
 
-    // SES KAYDETME VE GÖNDERME
-    async function startRecording() {
-        try {
-            const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            mediaRecorder = new MediaRecorder(stream);
-            document.getElementById('mic-btn').className = "mic-on";
-            audioChunks = [];
-            
-            mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
-            mediaRecorder.onstop = async () => {
-                const audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
-                const reader = new FileReader();
-                reader.readAsDataURL(audioBlob);
-                reader.onloadend = () => {
-                    db.ref('rooms/' + myRoom + '/chats').push({
-                        u: myName, t: reader.result, type: "audio"
-                    });
-                };
-            };
-            mediaRecorder.start();
-        } catch(e) { alert("Mikrofon izni lazım!"); }
-    }
-
-    function stopRecording() {
-        if(mediaRecorder) {
-            mediaRecorder.stop();
-            document.getElementById('mic-btn').className = "mic-off";
+    async function toggleStream() {
+        const btn = document.getElementById('mic-btn');
+        if(!localStream) {
+            localStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+            btn.className = "mic-on";
+            // Burada anlık veri akışı başlar
+        } else {
+            localStream.getTracks().forEach(t => t.stop());
+            localStream = null;
+            btn.className = "mic-off";
         }
-    }
-
-    function playAudio(base64) {
-        const audio = new Audio(base64);
-        audio.play();
     }
 
     function send() {
         const inp = document.getElementById('msg-input');
         if(!inp.value.trim()) return;
-        const isAdmin = (myName.toLowerCase() === "kemal");
-        db.ref('rooms/' + myRoom + '/chats').push({ u: myName, t: inp.value.trim(), admin: isAdmin, type: "text" });
+        db.ref('rooms/' + myRoom + '/chats').push({ u: myName, t: inp.value.trim() });
         inp.value = "";
-    }
-
-    function displayMessage(d) {
-        const div = document.createElement('div');
-        div.className = `msg ${d.u === myName ? 'msg-me' : 'msg-other'}`;
-        let badge = d.admin ? `<span class="admin-badge">ADMIN</span>` : "";
-        div.innerHTML = `<span class="user-tag">${badge}${d.u}</span>${d.t}`;
-        document.getElementById('messages').appendChild(div);
-        document.getElementById('messages').scrollTop = document.getElementById('messages').scrollHeight;
     }
 
     function loadVideo(url) {
