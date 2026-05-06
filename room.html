@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>KEMAL TV | SİNEMA ODASI</title>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
+    
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
+        body { background: #070d19; color: white; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+
+        /* VİDEO PLAYER ALANI (EN ÜSTTE ÇAKILI) */
+        #player-section {
+            width: 100%;
+            aspect-ratio: 16 / 9;
+            background: #000;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+        }
+        iframe { width: 100%; height: 100%; border: none; }
+
+        /* ODA BİLGİSİ VE SEKME TASARIMI */
+        #room-info {
+            padding: 15px;
+            background: #121c2d;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid #1e2a42;
+        }
+        .movie-title { font-weight: bold; font-size: 16px; color: #0099ff; }
+        .room-code { font-size: 12px; color: #8a99b5; }
+
+        /* SOHBET ALANI (ESNEK YAPI) */
+        #chat-section {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            background: #070d19;
+        }
+        #messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .msg { max-width: 80%; padding: 10px 15px; border-radius: 15px; font-size: 14px; line-height: 1.4; }
+        .msg.other { background: #121c2d; align-self: flex-start; border-bottom-left-radius: 2px; }
+        .msg.me { background: #0066ff; align-self: flex-end; border-bottom-right-radius: 2px; }
+        .msg-user { font-size: 11px; color: #8a99b5; margin-bottom: 4px; display: block; }
+
+        /* ALT KONTROL ÇUBUĞU (MİKROFON & MESAJ) */
+        .controls {
+            padding: 10px 15px;
+            background: #121c2d;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding-bottom: env(safe-area-inset-bottom); /* iPhone çentiği için */
+        }
+        #mic-btn {
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            border: none;
+            background: #1e2a42;
+            color: white;
+            font-size: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: 0.3s;
+            flex-shrink: 0;
+        }
+        #mic-btn.active { background: #ff4444; box-shadow: 0 0 15px rgba(255, 68, 68, 0.5); animation: pulse 1.5s infinite; }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        .input-wrapper {
+            flex: 1;
+            background: #070d19;
+            border-radius: 25px;
+            padding: 5px 15px;
+            display: flex;
+            align-items: center;
+            border: 1px solid #1e2a42;
+        }
+        #chat-input {
+            flex: 1;
+            background: transparent;
+            border: none;
+            color: white;
+            padding: 10px 0;
+            outline: none;
+            font-size: 14px;
+        }
+        #send-btn {
+            background: none;
+            border: none;
+            color: #0066ff;
+            font-weight: bold;
+            padding: 0 5px;
+        }
+
+        /* TAM EKRAN MODU BUTONU */
+        .fullscreen-btn {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            background: rgba(0,0,0,0.6);
+            border: none;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="player-section">
+        <div id="player-placeholder" style="height:100%; display:flex; align-items:center; justify-content:center; color:#333;">
+            HDMI Bağlantısı Bekleniyor...
+        </div>
+        <button class="fullscreen-btn" onclick="toggleFullscreen()">TAM EKRAN</button>
+    </div>
+
+    <div id="room-info">
+        <div>
+            <div class="movie-title" id="room-title">Yükleniyor...</div>
+            <div class="room-code" id="room-id-display">ODA KODU: ------</div>
+        </div>
+        <div id="voice-status" style="font-size: 10px; color: #00cc66;">Canlı Ses: 0 Kişi</div>
+    </div>
+
+    <div id="chat-section">
+        <div id="messages"></div>
+        
+        <div class="controls">
+            <button id="mic-btn" onclick="toggleVoice()">🎤</button>
+            <div class="input-wrapper">
+                <input type="text" id="chat-input" placeholder="Bir şeyler yaz...">
+                <button id="send-btn" onclick="sendMsg()">GÖNDER</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // FIREBASE CONFIG (Aynısını buraya yapıştır)
+        const firebaseConfig = {
+            apiKey: "AIzaSyC9R9X3FxqgNQ5kWerDmLRSyijbnquoRzg",
+            databaseURL: "https://kemaltv-95504-default-rtdb.europe-west1.firebasedatabase.app"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        // ODA VE KULLANICI BİLGİLERİ
+        const urlParams = new URLSearchParams(window.location.search);
+        const roomId = urlParams.get('id') || 'genel';
+        const myName = localStorage.getItem('k_display') || 'Misafir';
+
+        document.getElementById('room-id-display').innerText = "ODA KODU: " + roomId;
+
+        // 1. VİDEO TAKİBİ
+        db.ref('rooms/' + roomId).on('value', snap => {
+            const data = snap.val();
+            if(data && data.videoUrl) {
+                document.getElementById('room-title').innerText = data.title || "Sinema Odası";
+                let vUrl = data.videoUrl;
+                // YouTube linkini Embed'e çevir
+                if(vUrl.includes('youtube.com') || vUrl.includes('youtu.be')) {
+                    let id = vUrl.includes('v=') ? vUrl.split('v=')[1].split('&')[0] : vUrl.split('youtu.be/')[1];
+                    vUrl = `https://www.youtube.com/embed/${id}?autoplay=1&controls=1`;
+                }
+                document.getElementById('player-section').innerHTML = `<iframe src="${vUrl}" allow="autoplay;fullscreen"></iframe>`;
+            }
+        });
+
+        // 2. SOHBET TAKİBİ
+        db.ref('chats/' + roomId).limitToLast(50).on('child_added', snap => {
+            const d = snap.val();
+            const msgDiv = document.createElement('div');
+            msgDiv.className = `msg ${d.u === myName ? 'me' : 'other'}`;
+            msgDiv.innerHTML = `<span class="msg-user">${d.u}</span>${d.t}`;
+            document.getElementById('messages').appendChild(msgDiv);
+            document.getElementById('messages').scrollTop = document.getElementById('messages').scrollHeight;
+        });
+
+        function sendMsg() {
+            const inp = document.getElementById('chat-input');
+            if(inp.value.trim()) {
+                db.ref('chats/' + roomId).push({ u: myName, t: inp.value });
+                inp.value = "";
+            }
+        }
+
+        // 3. PROFESYONEL SESLİ SOHBET (PeerJS)
+        let myPeer = new Peer();
+        let myStream;
+        
+        function toggleVoice() {
+            const btn = document.getElementById('mic-btn');
+            if (!myStream) {
+                navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
+                    myStream = stream;
+                    btn.classList.add('active');
+                    // Oda sakinlerine bağlanma mantığı buraya gelecek
+                });
+            } else {
+                myStream.getTracks().forEach(t => t.stop());
+                myStream = null;
+                btn.classList.remove('active');
+            }
+        }
+
+        function toggleFullscreen() {
+            const el = document.getElementById('player-section');
+            if (el.requestFullscreen) el.requestFullscreen();
+            else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+        }
+    </script>
+</body>
+</html>
