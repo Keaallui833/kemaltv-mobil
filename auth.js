@@ -1,30 +1,45 @@
 // auth.js
 const authSection = document.getElementById('auth-layer');
 authSection.innerHTML = `
-    <div style="padding: 50px; text-align: center; height: 100vh; background: #050505;">
-        <h1 style="color:#ef4444; margin-bottom:40px;">KEMAL TV</h1>
-        <div id="auth-box" style="background:#111; padding:30px; border-radius:20px; border:1px solid #ef4444;">
-            <input type="text" id="user" placeholder="Kullanıcı Adı" style="width:100%; margin-bottom:15px;"><br>
-            <input type="password" id="pass" placeholder="Şifre" style="width:100%; margin-bottom:25px;"><br>
-            <button onclick="handleAuth('login')" style="width:100%; padding:15px; background:#ef4444; color:white; border:none; border-radius:10px; margin-bottom:10px; font-weight:bold;">GİRİŞ YAP</button>
-            <button onclick="handleAuth('reg')" style="width:100%; padding:15px; background:#333; color:white; border:none; border-radius:10px; font-weight:bold;">KAYIT OL</button>
+    <div style="padding: 40px; display: flex; align-items: center; justify-content: center; height: 100vh; background: #050505;">
+        <div style="background: #111; padding: 35px; border-radius: 25px; border: 1px solid #ef4444; width: 100%; max-width: 380px; text-align: center;">
+            <h1 style="color:#ef4444; margin-bottom:30px; font-size: 32px; letter-spacing: 2px;">KEMAL TV</h1>
+            
+            <input type="text" id="user_id" placeholder="Kullanıcı Adı">
+            <input type="password" id="pass_id" placeholder="Şifre">
+            
+            <div class="auth-btn-group">
+                <button onclick="handleAuth('login')" class="primary-btn">SİSTEME BAĞLAN</button>
+                <button onclick="handleAuth('reg')" class="secondary-btn">YENİ KAYIT OLUŞTUR</button>
+            </div>
         </div>
     </div>
 `;
 
 function handleAuth(type) {
-    const u = document.getElementById('user').value.trim();
-    const p = document.getElementById('pass').value.trim();
-    if(!u || !p) return alert("Eksiksiz doldur Kemal!");
+    // ID'leri yukarıdakilerle eşitledim, artık "bulamama" ihtimali yok.
+    const u = document.getElementById('user_id').value.trim();
+    const p = document.getElementById('pass_id').value.trim();
+
+    if(!u || !p) {
+        alert("Kemal, alanları boş bırakma kardeşim!");
+        return;
+    }
 
     if(type === 'reg') {
-        db.ref('users/' + u).set({ p: p }).then(() => alert("Kayıt Başarılı! Şimdi Giriş Yap."));
+        // Kayıt işlemi
+        db.ref('users/' + u).set({ p: p }).then(() => {
+            alert("Kayıt ok! Şimdi giriş yapabilirsin.");
+        }).catch(err => alert("Hata: " + err.message));
     } else {
+        // Giriş işlemi
         db.ref('users/' + u).once('value').then(s => {
             if(s.exists() && s.val().p === p) {
                 localStorage.setItem('k_user', u);
-                location.reload();
-            } else { alert("Hatalı Bilgi!"); }
+                location.reload(); // Her şeyi içeri aktarıp uygulamayı başlatır
+            } else {
+                alert("Kullanıcı adı veya şifre hatalı, tekrar dene.");
+            }
         });
     }
 }
