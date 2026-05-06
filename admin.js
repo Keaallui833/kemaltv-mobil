@@ -1,12 +1,10 @@
-// admin.js
-if(localStorage.getItem('kemal_user') === 'L.kemal.16') {
-    const adminBar = document.createElement('div');
-    adminBar.innerHTML = "ADMİN PANELİ (HDMI BASMAK İÇİN TIKLA)";
-    adminBar.style.cssText = "background:#ffd700; color:black; text-align:center; padding:10px; cursor:pointer; font-weight:bold;";
-    document.body.prepend(adminBar);
-    
-    adminBar.onclick = () => {
-        const link = prompt("YouTube Linkini Yapıştır Kemal:");
+if(localStorage.getItem('user') === 'L.kemal.16') {
+    const btn = document.createElement('button');
+    btn.innerText = "HDMI VER";
+    btn.style.cssText = "position:fixed; top:10px; right:10px; z-index:99; background:gold; color:black; padding:10px;";
+    document.body.appendChild(btn);
+    btn.onclick = () => {
+        const link = prompt("YouTube Linki:");
         if(link) db.ref('rooms/genel/currentVideo').set({ url: link });
     };
 }
