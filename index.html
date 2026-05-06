@@ -1,20 +1,146 @@
-function createRoom() {
-    const link = document.getElementById('new-room-link').value;
-    const pass = document.getElementById('new-room-pass').value;
-    const canUsersChange = document.getElementById('user-video-toggle').checked;
-    const roomCode = Math.floor(100000 + Math.random() * 900000).toString();
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>KEMAL TV | PRO ODA SİSTEMİ</title>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
     
-    db.ref('rooms/' + roomCode).set({
-        admin: activeUser,
-        videoUrl: link || "",
-        password: pass || "",
-        allowUserVideo: canUsersChange,
-        createdAt: Date.now()
-    }).then(() => {
-        alert("Oda Kodun: " + roomCode);
-        // Seni odaya yönlendirecek olan kritik satır burası:
-        window.location.href = "oda.html?id=" + roomCode; 
-    }).catch(err => {
-        alert("Hata: " + err.message);
-    });
-}
+    <style>
+        /* TASARIMINI AYNER GERİ GETİRDİM */
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
+        body { background: #070d19; color: #ffffff; height: 100vh; overflow: hidden; display: flex; align-items: center; justify-content: center; }
+        .screen { display: none; width: 100%; height: 100%; flex-direction: column; align-items: center; justify-content: center; padding: 20px; }
+        .screen.active { display: flex; }
+        .app-logo { background: #0066ff; width: 60px; height: 60px; border-radius: 16px; display: flex; align-items: center; justify-content: center; font-size: 30px; margin-bottom: 15px; box-shadow: 0 4px 15px rgba(0, 102, 255, 0.4); }
+        h1 { font-size: 28px; margin-bottom: 5px; }
+        .subtitle { color: #8a99b5; font-size: 14px; margin-bottom: 30px; }
+        .auth-container { width: 100%; max-width: 350px; }
+        .tabs { display: flex; background: #121c2d; border-radius: 12px; padding: 5px; margin-bottom: 20px; }
+        .tabs button { flex: 1; padding: 12px; border: none; background: transparent; color: #8a99b5; font-weight: 600; border-radius: 8px; cursor: pointer; transition: 0.3s; }
+        .tabs button.active { background: #0066ff; color: white; }
+        .input-group { display: flex; flex-direction: column; gap: 15px; margin-bottom: 25px; }
+        input { width: 100%; padding: 16px; border-radius: 12px; border: 1px solid #1e2a42; background: #121c2d; color: white; outline: none; font-size: 14px; }
+        input:focus { border-color: #0066ff; }
+        .main-btn { width: 100%; padding: 16px; border-radius: 12px; border: none; background: #0066ff; color: white; font-weight: 700; font-size: 16px; cursor: pointer; transition: 0.2s; }
+        .main-btn:active { transform: scale(0.98); }
+        .avatar { width: 80px; height: 80px; border-radius: 50%; background: #121c2d; border: 2px solid #0066ff; display: flex; align-items: center; justify-content: center; font-size: 28px; font-weight: bold; color: #0066ff; margin-bottom: 20px; }
+        .action-buttons { display: flex; gap: 15px; width: 100%; max-width: 350px; }
+        .action-buttons button { flex: 1; padding: 16px; border-radius: 12px; border: none; font-weight: 600; cursor: pointer; font-size: 15px; }
+        .btn-create { background: #0066ff; color: white; }
+        .btn-join { background: #1e2a42; color: white; }
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); display: none; align-items: flex-end; justify-content: center; z-index: 100; }
+        .modal-overlay.active { display: flex; }
+        .modal-content { background: #121c2d; width: 100%; max-width: 400px; padding: 25px; border-top-left-radius: 20px; border-top-right-radius: 20px; }
+        .guest-link { color: #8a99b5; text-decoration: underline; font-size: 13px; text-align: center; cursor: pointer; display: block; margin-top: 15px; }
+    </style>
+</head>
+<body>
+
+    <div id="auth-screen" class="screen active">
+        <div class="app-logo">🎬</div>
+        <h1>Kemal TV v2</h1>
+        <p class="subtitle">Giriş Yap ve Başla</p>
+        <div class="auth-container">
+            <div class="tabs">
+                <button id="tab-login" class="active" onclick="setMode('login')">Giriş</button>
+                <button id="tab-reg" onclick="setMode('register')">Kayıt</button>
+            </div>
+            <div class="input-group">
+                <input type="text" id="disp-name" placeholder="Görünen Ad" style="display:none;">
+                <input type="text" id="username" placeholder="Kullanıcı Adı">
+                <input type="password" id="password" placeholder="Şifre">
+            </div>
+            <button class="main-btn" onclick="processAuth()">Devam Et</button>
+        </div>
+    </div>
+
+    <div id="dashboard-screen" class="screen">
+        <div class="avatar" id="user-avatar">?</div>
+        <h2 id="welcome-text">Hoş geldin!</h2>
+        <div class="action-buttons" style="margin-top:30px;">
+            <button class="btn-create" onclick="openModal('create-modal')">Oda Kur</button>
+            <button class="btn-join" onclick="openModal('join-modal')">Odaya Gir</button>
+        </div>
+        <span class="guest-link" onclick="logOut()">Çıkış Yap</span>
+    </div>
+
+    <div id="create-modal" class="modal-overlay">
+        <div class="modal-content">
+            <h3 style="margin-bottom:15px; color:#0066ff;">Yeni Oda</h3>
+            <input type="text" id="new-room-link" placeholder="Video Linki (YouTube)">
+            <button class="main-btn" style="margin-top:15px;" onclick="createRoom()">Oluştur</button>
+            <button class="guest-link" style="border:none; background:none; width:100%;" onclick="closeModals()">Vazgeç</button>
+        </div>
+    </div>
+
+    <script>
+        // SENİN DOĞRU KONFİGÜRASYONUN
+        const firebaseConfig = {
+            apiKey: "AIzaSyB0jn9kAdRiq8SfLuJwodD8ydrmsmX0nEw",
+            authDomain: "kemaltv-e7af9.firebaseapp.com",
+            projectId: "kemaltv-e7af9",
+            databaseURL: "https://kemaltv-e7af9-default-rtdb.firebaseio.com",
+            appId: "1:582115406161:web:b95b2baf91494286886370"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        let currentMode = 'login';
+
+        function setMode(mode) {
+            currentMode = mode;
+            document.getElementById('disp-name').style.display = mode === 'register' ? 'block' : 'none';
+            document.getElementById('tab-login').classList.toggle('active', mode === 'login');
+            document.getElementById('tab-reg').classList.toggle('active', mode === 'register');
+        }
+
+        function processAuth() {
+            const u = document.getElementById('username').value.trim();
+            const p = document.getElementById('password').value.trim();
+            const d = document.getElementById('disp-name').value.trim();
+
+            if(currentMode === 'register') {
+                db.ref('users/' + u).set({ p: p, display: d || u }).then(() => {
+                    alert("Kayıt tamam! Giriş yapabilirsin.");
+                    setMode('login');
+                });
+            } else {
+                db.ref('users/' + u).once('value').then(s => {
+                    if(s.exists() && s.val().p === p) {
+                        localStorage.setItem('k_user', u);
+                        localStorage.setItem('k_display', s.val().display || u);
+                        startApp();
+                    } else { alert("Hatalı bilgi!"); }
+                });
+            }
+        }
+
+        function startApp() {
+            const disp = localStorage.getItem('k_display');
+            document.getElementById('welcome-text').innerText = "Hoş geldin, " + disp + "!";
+            document.getElementById('user-avatar').innerText = disp.substring(0, 2).toUpperCase();
+            document.getElementById('auth-screen').classList.remove('active');
+            document.getElementById('dashboard-screen').classList.add('active');
+        }
+
+        function openModal(id) { document.getElementById(id).classList.add('active'); }
+        function closeModals() { document.querySelectorAll('.modal-overlay').forEach(e => e.classList.remove('active')); }
+
+        function createRoom() {
+            const link = document.getElementById('new-room-link').value;
+            const code = Math.floor(100000 + Math.random() * 900000);
+            db.ref('rooms/' + code).set({ admin: localStorage.getItem('k_user'), url: link }).then(() => {
+                alert("Oda Kuruldu! Kod: " + code);
+                // Burada seni odaya atıyoruz
+                window.location.href = "oda.html?id=" + code;
+            });
+        }
+
+        function logOut() { localStorage.clear(); location.reload(); }
+        if(localStorage.getItem('k_user')) startApp();
+    </script>
+</body>
+  </html>
+  
