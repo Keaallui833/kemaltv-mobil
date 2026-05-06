@@ -1,34 +1,102 @@
-/* style.css içindeki input ve buton kısımlarını bununla değiştir */
-input { 
-    width: 100%; 
-    padding: 14px; 
-    margin-bottom: 15px; 
-    border-radius: 12px; 
-    border: 1px solid #334155; 
-    background: #1a1a1a; /* Artık bembeyaz değil, koyu ve şık */
+/* style.css - FULL CLEAN UP */
+* { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', sans-serif; }
+body { background: #050505; color: white; height: 100vh; display: flex; flex-direction: column; overflow: hidden; }
+
+/* 1. ÜST PANEL (YAYIN LİNKİ) */
+#stream-bar { 
+    background: #111; 
+    padding: 10px; 
+    display: flex; 
+    flex-direction: column; 
+    gap: 5px; 
+    border-bottom: 2px solid #ef4444; 
+}
+#stream-url { 
+    background: #1a1a1a; 
+    border: 1px solid #333; 
     color: white; 
-    font-size: 16px;
-    outline: none;
-    transition: 0.3s;
+    padding: 10px; 
+    border-radius: 8px; 
+    font-size: 14px; 
 }
-
-input:focus { border-color: #ef4444; box-shadow: 0 0 8px rgba(239, 68, 68, 0.3); }
-
-.auth-btn-group { display: flex; flex-direction: column; gap: 10px; width: 100%; }
-
-button { 
-    width: 100%; 
-    padding: 15px; 
-    border-radius: 12px; 
+#stream-bar button { 
+    background: #fff; 
+    color: #000; 
     border: none; 
-    font-weight: 800; 
-    cursor: pointer; 
-    font-size: 14px;
+    padding: 8px; 
+    border-radius: 8px; 
+    font-weight: bold; 
     text-transform: uppercase;
-    transition: 0.2s;
 }
 
-.primary-btn { background: #ef4444; color: white; }
-.secondary-btn { background: #2d3748; color: #cbd5e1; }
+/* 2. VİDEO ALANI (PLAYER) */
+#video-area { 
+    height: 30vh; 
+    background: #000; 
+    display: flex; 
+    align-items: center; 
+    justify-content: center; 
+    position: relative;
+}
+iframe { width: 100%; height: 100%; border: none; }
 
-button:active { transform: scale(0.98); }
+/* 3. SOHBET ALANI */
+#chat-area { 
+    flex: 1; 
+    display: flex; 
+    flex-direction: column; 
+    background: #080808; 
+    overflow: hidden;
+}
+#messages { 
+    flex: 1; 
+    overflow-y: auto; 
+    padding: 15px; 
+    font-size: 15px; 
+    line-height: 1.6;
+}
+.bottom-bar { 
+    background: #111; 
+    padding: 12px; 
+    display: flex; 
+    flex-direction: column; 
+    gap: 8px; 
+}
+#m-input { 
+    background: #1a1a1a; 
+    border: 1px solid #333; 
+    color: white; 
+    padding: 12px; 
+    border-radius: 12px; 
+}
+#send-btn { 
+    background: #fff; 
+    color: #000; 
+    border: none; 
+    padding: 12px; 
+    border-radius: 12px; 
+    font-weight: 900;
+}
+
+/* MİKROFON BUTONU */
+#mic-btn { 
+    background: #222; 
+    border: none; 
+    border-radius: 50%; 
+    width: 40px; 
+    height: 40px; 
+    align-self: center;
+}
+
+/* GİRİŞ EKRANI DÜZELTME */
+#auth-layer { 
+    position: fixed; 
+    inset: 0; 
+    z-index: 999; 
+    background: #050505; 
+    display: flex; 
+    justify-content: center; 
+    align-items: center; 
+}
+#auth-layer:not(.active) { display: none; }
+    
