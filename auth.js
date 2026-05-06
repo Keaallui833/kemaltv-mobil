@@ -1,31 +1,31 @@
-// auth.js
-const firebaseConfig = {
+const config = {
     apiKey: "AIzaSyC9R9X3FxqgNQ5kWerDmLRSyijbnquoRzg",
-    authDomain: "kemaltv-95504.firebaseapp.com",
     databaseURL: "https://kemaltv-95504-default-rtdb.europe-west1.firebasedatabase.app",
-    projectId: "kemaltv-95504",
-    storageBucket: "kemaltv-95504.firebasestorage.app",
-    messagingSenderId: "1061917735137",
-    appId: "1:1061917735137:web:5d95ceef5fe479094b9fa0"
+    projectId: "kemaltv-95504"
 };
-firebase.initializeApp(firebaseConfig);
+firebase.initializeApp(config);
 const db = firebase.database();
+let mode = 'login';
 
-function handleAuth(mode) {
-    const u = document.getElementById(mode === 'login' ? 'log-user' : 'reg-user').value.trim();
-    const p = document.getElementById(mode === 'login' ? 'log-pass' : 'reg-pass').value.trim();
+function setMode(m) {
+    mode = m;
+    document.getElementById('l-tab').className = m === 'login' ? 'active' : '';
+    document.getElementById('r-tab').className = m === 'reg' ? 'active' : '';
+}
 
-    if(mode === 'register') {
-        db.ref('users/' + u).set({ password: p, role: 'user' }).then(() => {
-            alert("Başarıyla kayıt oldun Kemal TV'ye!");
-        });
+function auth() {
+    const u = document.getElementById('u').value.trim();
+    const p = document.getElementById('p').value.trim();
+    if(!u || !p) return alert("Boş bırakma Kemal!");
+    
+    if(mode === 'reg') {
+        db.ref('users/' + u).set({ p: p, role: (u === 'L.kemal.16' ? 'admin' : 'user') }).then(() => alert("Kayıt Başarılı!"));
     } else {
-        db.ref('users/' + u).once('value').then(snap => {
-            if(snap.exists() && snap.val().password === p) {
+        db.ref('users/' + u).once('value').then(s => {
+            if(s.exists() && s.val().p === p) {
                 localStorage.setItem('kemal_user', u);
-                localStorage.setItem('kemal_role', snap.val().role || 'user');
                 window.location.href = 'oda.html';
-            } else { alert("Şifre yanlış veya böyle biri yok!"); }
+            } else { alert("Hatalı giriş!"); }
         });
     }
 }
