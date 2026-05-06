@@ -1,9 +1,17 @@
-// admin-panel.js
-const currentUser = localStorage.getItem('kemal_user');
-
-if (currentUser && currentUser.toLowerCase() === 'kemal') {
-    const bar = document.createElement('div');
-    bar.style = "background:#ffd700; color:black; padding:10px; font-weight:bold; text-align:center; position:fixed; top:0; width:100%; z-index:999;";
-    bar.innerHTML = `HOŞ GELDİN KEMAL - <button onclick="window.location.href='admin.html'" style="cursor:pointer;">YÖNETİMİ AÇ</button>`;
-    document.body.prepend(bar);
-}
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <title>KEMAL TV - YÖNETİM</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body style="background:#0b0f1a; color:white; padding:20px;">
+    <h1>KEMAL TV YÖNETİM</h1>
+    <div style="border:1px solid #ef4444; padding:20px; border-radius:15px;">
+        <h3>Kullanıcı Yönetimi</h3>
+        <p>Batın'a yetki ver veya birini engelle.</p>
+        <button onclick="alert('Sohbet temizlendi!')">SOHBETİ SİL</button>
+    </div>
+    <button onclick="window.location.href='oda.html'" style="margin-top:20px;">ODAYA DÖN</button>
+</body>
+</html>
