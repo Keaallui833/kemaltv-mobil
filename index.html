@@ -3,35 +3,35 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>KEMAL TV - Giriş & Kayıt</title>
+    <title>KEMAL TV - GİRİŞ</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
-    <link rel="stylesheet" href="style.css">
+    <style>
+        body { background: #0b0f1a; color: white; font-family: sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }
+        .auth-container { background: #161d2f; padding: 30px; border-radius: 20px; width: 90%; max-width: 380px; border: 1px solid #ef4444; text-align: center; }
+        .logo { color: #ef4444; margin-bottom: 20px; font-size: 28px; font-weight: bold; }
+        .tabs { display: flex; margin-bottom: 20px; gap: 10px; }
+        .tabs button { flex: 1; padding: 12px; background: #0b0f1a; border: none; color: #94a3b8; cursor: pointer; border-radius: 8px; }
+        .tabs button.active { background: #ef4444; color: white; }
+        input { width: 100%; padding: 12px; margin-bottom: 15px; border-radius: 10px; border: 1px solid #2d3748; background: #0b0f1a; color: white; box-sizing: border-box; }
+        .btn { width: 100%; padding: 15px; background: #ef4444; border: none; border-radius: 10px; color: white; font-weight: bold; cursor: pointer; }
+    </style>
 </head>
-<body class="auth-page">
+<body>
     <div class="auth-container">
-        <h1 class="logo">KEMAL TV</h1>
-        
-        <div class="auth-tabs">
-            <button id="tab-login" class="active" onclick="toggleAuth('login')">Giriş Yap</button>
-            <button id="tab-register" onclick="toggleAuth('register')">Kayıt Ol</button>
+        <div class="logo">KEMAL TV</div>
+        <div class="tabs">
+            <button id="t-log" class="active" onclick="setM('log')">Giriş Yap</button>
+            <button id="t-reg" onclick="setM('reg')">Kayıt Ol</button>
         </div>
-
-        <div id="login-form" class="form-box">
-            <input type="text" id="log-user" placeholder="Kullanıcı Adı">
-            <input type="password" id="log-pass" placeholder="Şifre">
-            <button class="btn-primary" onclick="handleAuth('login')">Giriş Yap</button>
-        </div>
-
-        <div id="register-form" class="form-box" style="display:none;">
-            <input type="text" id="reg-user" placeholder="Yeni Kullanıcı Adı">
-            <input type="password" id="reg-pass" placeholder="Yeni Şifre">
-            <button class="btn-primary" onclick="handleAuth('register')">Hesap Oluştur</button>
+        <div id="f-box">
+            <input type="text" id="u-name" placeholder="Kullanıcı Adı">
+            <input type="password" id="u-pass" placeholder="Şifre">
+            <button class="btn" onclick="go()">DEVAM ET</button>
         </div>
     </div>
-
     <script>
-        const firebaseConfig = {
+        const config = {
             apiKey: "AIzaSyC9R9X3FxqgNQ5kWerDmLRSyijbnquoRzg",
             authDomain: "kemaltv-95504.firebaseapp.com",
             databaseURL: "https://kemaltv-95504-default-rtdb.europe-west1.firebasedatabase.app",
@@ -40,37 +40,32 @@
             messagingSenderId: "1061917735137",
             appId: "1:1061917735137:web:5d95ceef5fe479094b9fa0"
         };
-        firebase.initializeApp(firebaseConfig);
+        firebase.initializeApp(config);
         const db = firebase.database();
+        let mode = 'log';
 
-        function toggleAuth(mode) {
-            document.getElementById('login-form').style.display = mode === 'login' ? 'block' : 'none';
-            document.getElementById('register-form').style.display = mode === 'register' ? 'block' : 'none';
-            document.getElementById('tab-login').className = mode === 'login' ? 'active' : '';
-            document.getElementById('tab-register').className = mode === 'register' ? 'active' : '';
+        function setM(m) {
+            mode = m;
+            document.getElementById('t-log').className = m === 'log' ? 'active' : '';
+            document.getElementById('t-reg').className = m === 'reg' ? 'active' : '';
         }
 
-        function handleAuth(mode) {
-            const u = document.getElementById(mode === 'login' ? 'log-user' : 'reg-user').value.trim();
-            const p = document.getElementById(mode === 'login' ? 'log-pass' : 'reg-pass').value.trim();
-
+        function go() {
+            const u = document.getElementById('u-name').value.trim();
+            const p = document.getElementById('u-pass').value.trim();
             if(!u || !p) return alert("Boş bırakma Kemal!");
 
-            if(mode === 'register') {
-                db.ref('users/' + u).set({ password: p }).then(() => {
-                    alert("Kayıt başarılı! Şimdi giriş yapabilirsin.");
-                    toggleAuth('login');
-                });
+            if(mode === 'reg') {
+                db.ref('users/' + u).set({ p: p }).then(() => { alert("Kayıt tamam, giriş yap!"); setM('log'); });
             } else {
-                db.ref('users/' + u).once('value').then(snap => {
-                    if(snap.exists() && snap.val().password === p) {
+                db.ref('users/' + u).once('value').then(s => {
+                    if(s.exists() && s.val().p === p) {
                         localStorage.setItem('kemal_user', u);
                         window.location.href = 'oda.html';
-                    } else { alert("Hatalı kullanıcı adı veya şifre!"); }
+                    } else { alert("Hatalı giriş!"); }
                 });
             }
         }
     </script>
 </body>
 </html>
-
