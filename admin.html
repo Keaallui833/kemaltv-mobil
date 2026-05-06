@@ -2,20 +2,115 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <title>ADMİN KOMUTA MERKEZİ</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KEMAL TV | ADMIN PANEL</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
-    <link rel="stylesheet" href="style.css">
+    <style>
+        body { background: #050a14; color: white; font-family: sans-serif; padding: 20px; }
+        .card { background: #111b2d; border-radius: 15px; padding: 20px; margin-bottom: 20px; border: 1px solid #0066ff; }
+        h2 { color: #0066ff; margin-bottom: 15px; font-size: 18px; text-transform: uppercase; }
+        input { width: 100%; padding: 12px; border-radius: 8px; border: 1px solid #1e2a42; background: #070d19; color: white; margin-bottom: 10px; }
+        .btn { width: 100%; padding: 15px; border-radius: 8px; border: none; font-weight: bold; cursor: pointer; }
+        .btn-send { background: #0066ff; color: white; }
+        .btn-control { background: #ff4444; color: white; margin-top: 5px; }
+        .room-item { background: #070d19; padding: 10px; border-radius: 8px; margin-top: 5px; display: flex; justify-content: space-between; }
+    </style>
 </head>
-<body class="admin-body">
-    <div class="admin-panel">
-        <h2>SÜPER ADMİN: L.KEMAL.16</h2>
-        <input type="text" id="v-url" placeholder="YouTube Linkini Bas">
-        <button onclick="sendHDMI()">HDMI YAYININA VER</button>
-        <button class="danger" onclick="clearAll()">TÜM SOHBETİ SİL</button>
-        <div id="room-viewer">
-            </div>
+<body>
+
+    <h1>KEMAL ADMIN v1</h1>
+
+    <div class="card">
+        <h2>TMDB Film Bas</h2>
+        <input type="text" id="movie-query" placeholder="Film adı yaz...">
+        <button class="btn btn-send" onclick="searchMovie()">FİLM ARA & BAS</button>
+        <div id="search-results" style="margin-top:10px;"></div>
     </div>
-    <script src="admin.js"></script>
+
+    <div class="card">
+        <h2>Oynatma Kontrolü (Tüm Odalar)</h2>
+        <div style="display:flex; gap:10px;">
+            <button class="btn btn-send" onclick="masterControl('play')">OYNAT</button>
+            <button class="btn btn-send" style="background:#888" onclick="masterControl('pause')">DURDUR</button>
+        </div>
+        <input type="number" id="seek-input" placeholder="Saniye (Örn: 120)" style="margin-top:10px;">
+        <button class="btn btn-send" style="background:orange" onclick="masterControl('seek')">SANIYEYE GİT</button>
+    </div>
+
+    <div class="card">
+        <h2>Aktif Odalar</h2>
+        <div id="active-rooms-list">Yükleniyor...</div>
+    </div>
+
+    <script>
+        // FIREBASE BAĞLANTISI (Config buraya gelecek)
+        const firebaseConfig = {
+            apiKey: "AIzaSyC9R9X3FxqgNQ5kWerDmLRSyijbnquoRzg",
+            databaseURL: "https://kemaltv-95504-default-rtdb.europe-west1.firebasedatabase.app"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
+
+        // 1. TMDB FİLM ARAMA
+        async function searchMovie() {
+            const q = document.getElementById('movie-query').value;
+            const api = '212de16fcc7b6974c874e40687b0425a';
+            const res = await fetch(`https://api.themoviedb.org/3/search/movie?api_key=${api}&query=${q}`);
+            const data = await res.json();
+            
+            let html = '';
+            data.results.slice(0, 3).forEach(m => {
+                html += `<div style="padding:10px; border-bottom:1px solid #333">
+                    <small>${m.title}</small>
+                    <button onclick="pushMovie('${m.title}', '${m.poster_path}')">BAS</button>
+                </div>`;
+            });
+            document.getElementById('search-results').innerHTML = html;
+        }
+
+        function pushMovie(title, poster) {
+            const room = prompt("Hangi oda koduna basılsın?");
+            if(room) {
+                db.ref('rooms/' + room).update({
+                    videoUrl: "https://www.youtube.com/watch?v=dQw4w9WgXcQ", // Buraya kaçak site linki gelecek
+                    title: title,
+                    poster: "https://image.tmdb.org/t/p/w500" + poster
+                });
+                alert(title + " odasına gönderildi!");
+            }
+        }
+
+        // 2. MASTER CONTROL (DURDUR/SART/OYNA)
+        function masterControl(action) {
+            const room = prompt("Oda Kodu?");
+            if(!room) return;
+            
+            const ref = db.ref('rooms/' + room + '/sync');
+            if(action === 'play') ref.update({ state: 'playing' });
+            if(action === 'pause') ref.update({ state: 'paused' });
+            if(action === 'seek') {
+                const sec = document.getElementById('seek-input').value;
+                ref.update({ seek: parseInt(sec) });
+            }
+        }
+
+        // 3. AKTİF ODALARI LİSTELE
+        db.ref('rooms').on('value', s => {
+            let html = '';
+            s.forEach(room => {
+                html += `<div class="room-item">
+                    <span>Kod: ${room.key}</span>
+                    <button onclick="deleteRoom('${room.key}')">KAPAT</button>
+                </div>`;
+            });
+            document.getElementById('active-rooms-list').innerHTML = html;
+        });
+
+        function deleteRoom(id) {
+            if(confirm("Odayı kapatmak istiyor musun?")) db.ref('rooms/' + id).remove();
+        }
+    </script>
 </body>
-</html>
+    </html>
+    
